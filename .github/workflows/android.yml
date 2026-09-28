@@ -6,10 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -21,6 +19,86 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+
+      - name: Create Android project
+        shell: bash
+        run: |
+          mkdir -p app/src/main/java/com/zubairi/scream app/src/main/assets app/src/main/res/values
+
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name="KashirScream"
+          include(":app")
+          EOF
+
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.6.1" apply false
+          }
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+
+          cat > app/build.gradle.kts <<'EOF'
+          plugins { id("com.android.application") }
+          android {
+              namespace="com.zubairi.scream"
+              compileSdk=35
+              defaultConfig {
+                  applicationId="com.zubairi.scream"
+                  minSdk=23
+                  targetSdk=35
+                  versionCode=1
+                  versionName="1.0"
+              }
+          }
+          dependencies {
+              implementation("androidx.appcompat:appcompat:1.7.0")
+          }
+          EOF
+
+          cat > app/src/main/res/values/strings.xml <<'EOF'
+          <resources><string name="app_name">كاشير سكريم</string></resources>
+          EOF
+
+          cat > app/src/main/res/values/themes.xml <<'EOF'
+          <resources><style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">true</item><item name="android:statusBarColor">#F5F6F8</item></style></resources>
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:theme="@style/AppTheme" android:label="@string/app_name" android:usesCleartextTraffic="false">
+              <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true">
+                <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/zubairi/scream/MainActivity.java <<'EOF'
+          package com.zubairi.scream;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          public class MainActivity extends Activity {
+            @Override public void onCreate(Bundle b) {
+              super.onCreate(b);
+              WebView w=new WebView(this);
+              w.getSettings().setJavaScriptEnabled(true);
+              w.getSettings().setDomStorageEnabled(true);
+              w.setWebViewClient(new WebViewClient());
+              w.loadUrl("file:///android_asset/index.html");
+              setContentView(w);
+            }
+          }
+          EOF
+
+          echo PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iYXIiIGRpcj0icnRsIj48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPgo8dGl0bGU+2YPYp9i02YrYsSDYs9mD2LHZitmFPC90aXRsZT48c3R5bGU+Cip7Ym94LXNpemluZzpib3JkZXItYm94fWJvZHl7Zm9udC1mYW1pbHk6QXJpYWwsc2Fucy1zZXJpZjtiYWNrZ3JvdW5kOiNmNWY2Zjg7bWFyZ2luOjA7cGFkZGluZzoxMHB4O2NvbG9yOiMxNzIwMzN9Ci5jYXJke2JhY2tncm91bmQ6d2hpdGU7Ym9yZGVyLXJhZGl1czoxNnB4O3BhZGRpbmc6MTRweDttYXJnaW4tYm90dG9tOjEycHg7Ym94LXNoYWRvdzowIDJweCA4cHggIzAwMDF9aDJ7Zm9udC1zaXplOjE4cHg7bWFyZ2luOjAgMCAxMnB4fQppbnB1dCxidXR0b257d2lkdGg6MTAwJTtwYWRkaW5nOjEycHg7Ym9yZGVyLXJhZGl1czoxMnB4O2JvcmRlcjoxcHggc29saWQgI2RkZDttYXJnaW46NXB4IDAgOXB4O2ZvbnQtc2l6ZToxNXB4fWJ1dHRvbntiYWNrZ3JvdW5kOiMxNzIwMzM7Y29sb3I6I2ZmZjtib3JkZXI6MDtmb250LXdlaWdodDpib2xkfQouZ3JpZHtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciAxZnI7Z2FwOjlweH0uaXRlbXtib3JkZXI6MnB4IHNvbGlkICNlZWU7Ym9yZGVyLXJhZGl1czoxNHB4O3BhZGRpbmc6OXB4O3RleHQtYWxpZ246Y2VudGVyfS5xdHl7ZGlzcGxheTpmbGV4O2dhcDo1cHg7YWxpZ24taXRlbXM6Y2VudGVyfS5xdHkgYnV0dG9ue3dpZHRoOjM4cHg7Ym9yZGVyLXJhZGl1czo1MCU7cGFkZGluZzo4cHg7bWFyZ2luOjNweH0ucXR5IGlucHV0e21hcmdpbjozcHg7dGV4dC1hbGlnbjpjZW50ZXJ9LnJvd3tkaXNwbGF5OmZsZXg7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47cGFkZGluZzo5cHggMDtib3JkZXItYm90dG9tOjFweCBkYXNoZWQgI2RkZH0udG90YWx7YmFja2dyb3VuZDojMTcyMDMzO2NvbG9yOndoaXRlO2JvcmRlci1yYWRpdXM6MTBweDtwYWRkaW5nOjEycHg7ZGlzcGxheTpmbGV4O2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVuO2ZvbnQtd2VpZ2h0OmJvbGR9Lm5hdntkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciAxZnI7Z2FwOjdweH0uc21hbGx7Zm9udC1zaXplOjEycHg7Y29sb3I6IzY4NzM4Nn10YWJsZXt3aWR0aDoxMDAlO2JvcmRlci1jb2xsYXBzZTpjb2xsYXBzZTtmb250LXNpemU6MTJweH10ZCx0aHtwYWRkaW5nOjdweDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZWVlO3RleHQtYWxpZ246Y2VudGVyfS5mb290e3RleHQtYWxpZ246Y2VudGVyO2NvbG9yOiM2ODczODY7Zm9udC1zaXplOjEycHg7cGFkZGluZzoxNXB4fQo8L3N0eWxlPjxib2R5PjxkaXYgaWQ9ImFwcCI+PC9kaXY+PHNjcmlwdD4KY29uc3QgUD1bWydtYW5nbycsJ/Cfpa0g2YXZhtis2KknXSxbJ3N0cmF3Jywn8J+NkyDZgdix2KfZiNmE2KknXSxbJ2d1YXZhJywn8J+NiCDYrNmI2KfZgdipJ10sWydtb2Fzc2VsJywn8J+NryDZhdi52LPZhCddXTsKbGV0IGRiPUpTT04ucGFyc2UobG9jYWxTdG9yYWdlLnNjcmVhbURCfHwneyJvcmRlcnMiOltdLCJyZXR1cm5zIjpbXSwib3duZXJzIjpbXX0nKSxxPXttYW5nbzowLHN0cmF3OjAsZ3VhdmE6MCxtb2Fzc2VsOjB9Owpjb25zdCB0b2RheT0oKT0+bmV3IERhdGUoKS50b0lTT1N0cmluZygpLnNsaWNlKDAsMTApLCBzYXZlPSgpPT5sb2NhbFN0b3JhZ2Uuc2NyZWFtREI9SlNPTi5zdHJpbmdpZnkoZGIpOwpjb25zdCB0b3RhbD14PT5QLnJlZHVjZSgocyxwKT0+cysoK3hbcFswXV18fDApLDApOwpmdW5jdGlvbiBzaGVsbCh0aXRsZSxjKXthcHAuaW5uZXJIVE1MPWA8ZGl2IGNsYXNzPWNhcmQ+PGgyPiR7dGl0bGV9PC9oMj48ZGl2IGNsYXNzPW5hdj4KPGJ1dHRvbiBvbmNsaWNrPWhvbWUoKT7wn6e+INi32YTYqCDZhdmI2LLYuTwvYnV0dG9uPjxidXR0b24gb25jbGljaz1yZXQoKT7ihqnvuI8g2YXYsdiq2KzYuTwvYnV0dG9uPgo8YnV0dG9uIG9uY2xpY2s9b3duKCk+8J+RpCDYs9it2KjZitin2Kog2KfZhNmF2KfZhNmDPC9idXR0b24+PGJ1dHRvbiBvbmNsaWNrPXN1bSgpPvCfk4og2K7ZhNin2LXYqSDYp9mE2YrZiNmFPC9idXR0b24+PC9kaXY+PC9kaXY+JHtjfTxkaXYgY2xhc3M9Zm9vdD7YqNix2YXYrNipINmI2KXZhti02KfYoSDYp9mE2LLYqNmK2LHZijxicj7YqjogNzc1MTU0Mjk3PC9kaXY+YH0KZnVuY3Rpb24gaG9tZSgpe3E9e21hbmdvOjAsc3RyYXc6MCxndWF2YTowLG1vYXNzZWw6MH07c2hlbGwoJ/Cfpa0g2YPYp9i02YrYsSDYs9mD2LHZitmFJyxgPGRpdiBjbGFzcz1jYXJkPjxpbnB1dCBpZD1uIHBsYWNlaG9sZGVyPSLYp9iz2YUg2KfZhNmF2YjYsti5Ij48aW5wdXQgaWQ9ZCB0eXBlPWRhdGUgdmFsdWU9JHt0b2RheSgpfT48L2Rpdj4KPGRpdiBjbGFzcz1jYXJkPjxoMj7Yp9mE2YPZhdmK2Kkg2KjYp9mE2LTYr9in2Ko8L2gyPjxkaXYgaWQ9aXRlbXMgY2xhc3M9Z3JpZD48L2Rpdj48L2Rpdj48ZGl2IGNsYXNzPWNhcmQ+PGgyPtin2YTZgdin2KrZiNix2Kk8L2gyPjxkaXYgaWQ9aW52PjwvZGl2PjxkaXYgY2xhc3M9dG90YWw+PHNwYW4+2KfZhNil2KzZhdin2YTZijwvc3Bhbj48c3BhbiBpZD1pdD4wPC9zcGFuPjwvZGl2PjxidXR0b24gb25jbGljaz1zYXZlT3JkZXIoKT7wn5K+INit2YHYuCDYp9mE2LfZhNioINmI2LfYqNin2LnYqTwvYnV0dG9uPjwvZGl2PmApO2RyYXcoKX0KZnVuY3Rpb24gZHJhdygpe2l0ZW1zLmlubmVySFRNTD1QLm1hcChwPT5gPGRpdiBjbGFzcz1pdGVtPjxiPiR7cFsxXX08L2I+PGRpdiBjbGFzcz1xdHk+PGJ1dHRvbiBvbmNsaWNrPWNoZygnJHtwWzBdfScsLTEpPuKIkjwvYnV0dG9uPjxpbnB1dCB0eXBlPW51bWJlciBtaW49MCB2YWx1ZT0ke3FbcFswXV19IG9uY2hhbmdlPSJzZXRxKCcke3BbMF19Jyx0aGlzLnZhbHVlKSI+PGJ1dHRvbiBvbmNsaWNrPWNoZygnJHtwWzBdfScsMSk+KzwvYnV0dG9uPjwvZGl2PjwvZGl2PmApLmpvaW4oJycpO2ludi5pbm5lckhUTUw9UC5maWx0ZXIocD0+cVtwWzBdXT4wKS5tYXAocD0+YDxkaXYgY2xhc3M9cm93PjxzcGFuPiR7cFsxXX08L3NwYW4+PGI+JHtxW3BbMF1dfSDYtNiv2Kk8L2I+PC9kaXY+YCkuam9pbignJyl8fCc8cCBjbGFzcz1zbWFsbD7ZhNmFINiq2K3Yr9ivINij2Yog2LXZhtmBPC9wPic7aXQudGV4dENvbnRlbnQ9dG90YWwocSkrJyDYtNiv2KknfQpmdW5jdGlvbiBjaGcoayx2KXtxW2tdPU1hdGgubWF4KDAsKHFba118fDApK3YpO2RyYXcoKX1mdW5jdGlvbiBzZXRxKGssdil7cVtrXT1NYXRoLm1heCgwLHBhcnNlSW50KHYpfHwwKTtkcmF3KCl9CmZ1bmN0aW9uIHNhdmVPcmRlcigpe2xldCBuYW1lPW4udmFsdWUudHJpbSgpLGRhdGU9ZC52YWx1ZTtpZighbmFtZSlyZXR1cm4gYWxlcnQoJ9in2YPYqtioINin2LPZhSDYp9mE2YXZiNiy2LknKTtpZighdG90YWwocSkpcmV0dXJuIGFsZXJ0KCfYrdiv2K8g2KfZhNmD2YXZitipJyk7ZGIub3JkZXJzLnB1c2goe25hbWUsZGF0ZSxpdGVtczp7Li4ucX0sdG90YWw6dG90YWwocSl9KTtzYXZlKCk7YWxlcnQoJ9iq2YUg2KfZhNit2YHYuCcpO3dpbmRvdy5wcmludCgpO2hvbWUoKX0KZnVuY3Rpb24gcmV0KCl7c2hlbGwoJ+KGqe+4jyDYqtiz2KzZitmEINmF2LHYqtis2LknLGA8ZGl2IGNsYXNzPWNhcmQ+PGlucHV0IGlkPXJuIHBsYWNlaG9sZGVyPSLYp9iz2YUg2KfZhNmF2YjYsti5Ij48aW5wdXQgaWQ9cmQgdHlwZT1kYXRlIHZhbHVlPSR7dG9kYXkoKX0+PGRpdiBpZD1yaSBjbGFzcz1ncmlkPjwvZGl2PjxidXR0b24gb25jbGljaz1zYXZlUmV0KCk+8J+SviDYrdmB2Lgg2KfZhNmF2LHYqtis2Lk8L2J1dHRvbj48L2Rpdj48ZGl2IGNsYXNzPWNhcmQ+PGRpdiBpZD1ybD48L2Rpdj48L2Rpdj5gKTtyaS5pbm5lckhUTUw9UC5tYXAocD0+YDxkaXYgY2xhc3M9aXRlbT48Yj4ke3BbMV19PC9iPjxpbnB1dCBpZD1yXyR7cFswXX0gdHlwZT1udW1iZXIgbWluPTAgdmFsdWU9MD48L2Rpdj5gKS5qb2luKCcnKTtybC5pbm5lckhUTUw9ZGIucmV0dXJucy5maWx0ZXIoeD0+eC5kYXRlPT10b2RheSgpKS5tYXAoeD0+YDxkaXYgY2xhc3M9cm93PjxzcGFuPiR7eC5uYW1lfTwvc3Bhbj48Yj7iiJIke3gudG90YWx9INi02K/YqTwvYj48L2Rpdj5gKS5qb2luKCcnKXx8JzxwIGNsYXNzPXNtYWxsPtmE2Kcg2YrZiNis2K8g2YXYsdiq2KzYuSDYp9mE2YrZiNmFPC9wPid9CmZ1bmN0aW9uIHNhdmVSZXQoKXtsZXQgeD17bmFtZTpybi52YWx1ZS50cmltKCksZGF0ZTpyZC52YWx1ZSxpdGVtczp7fX07UC5mb3JFYWNoKHA9PnguaXRlbXNbcFswXV09K2RvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyXycrcFswXSkudmFsdWV8fDApO3gudG90YWw9dG90YWwoeC5pdGVtcyk7aWYoIXgubmFtZXx8IXgudG90YWwpcmV0dXJuIGFsZXJ0KCfYo9iv2K7ZhCDYp9iz2YUg2KfZhNmF2YjYsti5INmI2KfZhNmD2YXZitipJyk7ZGIucmV0dXJucy5wdXNoKHgpO3NhdmUoKTtyZXQoKX0KZnVuY3Rpb24gb3duKCl7c2hlbGwoJ/CfkaQg2LPYrdio2YrYp9iqINin2YTZhdin2YTZgycsYDxkaXYgY2xhc3M9Y2FyZD48aW5wdXQgaWQ9b2QgdHlwZT1kYXRlIHZhbHVlPSR7dG9kYXkoKX0+PGlucHV0IGlkPW9uIHBsYWNlaG9sZGVyPSLYp9mE2KjZitin2YYiPjxkaXYgaWQ9b2kgY2xhc3M9Z3JpZD48L2Rpdj48YnV0dG9uIG9uY2xpY2s9c2F2ZU93bigpPvCfkr4g2K3Zgdi4INin2YTYs9it2Kg8L2J1dHRvbj48L2Rpdj48ZGl2IGNsYXNzPWNhcmQ+PGRpdiBpZD1vbD48L2Rpdj48L2Rpdj5gKTtvaS5pbm5lckhUTUw9UC5tYXAocD0+YDxkaXYgY2xhc3M9aXRlbT48Yj4ke3BbMV19PC9iPjxpbnB1dCBpZD1vXyR7cFswXX0gdHlwZT1udW1iZXIgbWluPTAgdmFsdWU9MD48L2Rpdj5gKS5qb2luKCcnKTtvbC5pbm5lckhUTUw9ZGIub3duZXJzLmZpbHRlcih4PT54LmRhdGU9PXRvZGF5KCkpLm1hcCh4PT5gPGRpdiBjbGFzcz1yb3c+PHNwYW4+JHt4Lm5vdGV9PC9zcGFuPjxiPiR7eC50b3RhbH0g2LTYr9ipPC9iPjwvZGl2PmApLmpvaW4oJycpfHwnPHAgY2xhc3M9c21hbGw+2YTYpyDZitmI2KzYryDYs9it2Kgg2KfZhNmK2YjZhTwvcD4nfQpmdW5jdGlvbiBzYXZlT3duKCl7bGV0IHg9e2RhdGU6b2QudmFsdWUsbm90ZTpvbi52YWx1ZXx8J9iz2K3YqCDYp9mE2YXYp9mE2YMnLGl0ZW1zOnt9fTtQLmZvckVhY2gocD0+eC5pdGVtc1twWzBdXT0rZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ29fJytwWzBdKS52YWx1ZXx8MCk7eC50b3RhbD10b3RhbCh4Lml0ZW1zKTtpZigheC50b3RhbClyZXR1cm4gYWxlcnQoJ9ij2K/YrtmEINin2YTZg9mF2YrYqScpO2RiLm93bmVycy5wdXNoKHgpO3NhdmUoKTtvd24oKX0KZnVuY3Rpb24gc3VtKCl7c2hlbGwoJ/Cfk4og2K7ZhNin2LXYqSDYp9mE2YrZiNmFJyxgPGRpdiBjbGFzcz1jYXJkPjxpbnB1dCBpZD1zZCB0eXBlPWRhdGUgdmFsdWU9JHt0b2RheSgpfSBvbmNoYW5nZT1yZW5kZXJTdW0oKT48ZGl2IGlkPXNzPjwvZGl2PjwvZGl2PmApO3JlbmRlclN1bSgpfQpmdW5jdGlvbiByZW5kZXJTdW0oKXtsZXQgZGF0ZT1zZC52YWx1ZSxPPWRiLm9yZGVycy5maWx0ZXIoeD0+eC5kYXRlPT1kYXRlKSxSPWRiLnJldHVybnMuZmlsdGVyKHg9PnguZGF0ZT09ZGF0ZSksTT17fTtPLmZvckVhY2goeD0+e01beC5uYW1lXT8/PXtvOjAscjowfTtNW3gubmFtZV0ubys9eC50b3RhbH0pO1IuZm9yRWFjaCh4PT57TVt4Lm5hbWVdPz89e286MCxyOjB9O01beC5uYW1lXS5yKz14LnRvdGFsfSk7bGV0IGE9T2JqZWN0LmVudHJpZXMoTSksZ289Ty5yZWR1Y2UoKHMseCk9PnMreC50b3RhbCwwKSxncj1SLnJlZHVjZSgocyx4KT0+cyt4LnRvdGFsLDApLG93bnI9ZGIub3duZXJzLmZpbHRlcih4PT54LmRhdGU9PWRhdGUpLnJlZHVjZSgocyx4KT0+cyt4LnRvdGFsLDApO3NzLmlubmVySFRNTD1gPHRhYmxlPjx0cj48dGg+2KfZhNmF2YjYsti5PC90aD48dGg+2KfZhNiz2K3YqDwvdGg+PHRoPtin2YTZhdix2KrYrNi5PC90aD48dGg+2KfZhNi12KfZgdmKPC90aD48L3RyPiR7YS5tYXAoKFtuLHZdKT0+YDx0cj48dGQ+JHtufTwvdGQ+PHRkPiR7di5vfTwvdGQ+PHRkPiR7di5yfTwvdGQ+PHRkPjxiPiR7di5vLXYucn08L2I+PC90ZD48L3RyPmApLmpvaW4oJycpfTwvdGFibGU+PGJyPjxkaXYgY2xhc3M9dG90YWw+PHNwYW4+2LXYp9mB2Yog2LPYrdioINin2YTZhdmI2LLYudmK2YY8L3NwYW4+PHNwYW4+JHtnby1ncn0g2LTYr9ipPC9zcGFuPjwvZGl2PjxkaXYgY2xhc3M9cm93PjxzcGFuPti32YTYqNin2Ko8L3NwYW4+PGI+JHtnb308L2I+PC9kaXY+PGRpdiBjbGFzcz1yb3c+PHNwYW4+2YXYsdiq2KzYudin2Ko8L3NwYW4+PGI+4oiSJHtncn08L2I+PC9kaXY+PGRpdiBjbGFzcz1yb3c+PHNwYW4+2LPYrdio2YrYp9iqINin2YTZhdin2YTZgzwvc3Bhbj48Yj4ke293bnJ9PC9iPjwvZGl2PmB9CmhvbWUoKTsKPC9zY3JpcHQ+PC9ib2R5PjwvaHRtbD4= | base64 -d > app/src/main/assets/index.html
 
       - name: Build APK
         run: gradle assembleDebug
